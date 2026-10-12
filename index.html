@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>행동분석 관찰 기록 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+        .touch-action-manipulation {
+            touch-action: manipulation;
+        }
+        .pulse-record {
+            animation: recordPulse 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes recordPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.94); }
+            100% { transform: scale(1); }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @media print {
+            header, nav, #syncStatusBanner, #btnGenerateAiReport, #reportControls, #btnExportCsv, #btnClearData {
+                display: none !important;
+            }
+            #reportResultArea {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-800">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight leading-none">행동분석 관찰기록 & AI 코칭</h1>
+                    <p class="text-xs text-slate-500 mt-1">ABA 표적행동 빈도·강도 트래커 & Gemini 지능형 상담 리포트</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <button id="btnOpenSheetsGuide" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors">
+                    <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H6v-2h6v2zm4-4H6v-2h10v2zm0-4H6V7h10v2z"/>
+                    </svg>
+                    구글 시트 연동 설정
+                </button>
+                <button id="btnOpenSettings" class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors" title="학생 및 행동 설정">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-white border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 flex space-x-1 sm:space-x-4">
+            <button id="tabTrackerBtn" class="py-3 px-4 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 flex items-center space-x-2 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                <span>실시간 관찰 기록 & 통계</span>
+            </button>
+            <button id="tabAiReportBtn" class="py-3 px-4 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition-all">
+                <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                <span>AI 행동분석 리포트 & 코칭</span>
+                <span class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white">Gemini</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+        <!-- Google Sheet Sync Status Banner -->
+        <div id="syncStatusBanner" class="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-indigo-900">
+            <div class="flex items-center space-x-2">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span id="syncPulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 hidden"></span>
+                    <span id="syncDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+                </span>
+                <span id="syncStatusText">구글 시트 연동 URL이 아직 설정되지 않았습니다 (기록은 로컬에 자동 보관됩니다)</span>
+            </div>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <button id="btnExportCsv" class="px-2.5 py-1 bg-white hover:bg-slate-50 border border-indigo-200 rounded-lg text-indigo-700 font-medium transition-colors shadow-xs">
+                    CSV 다운로드
+                </button>
+                <button id="btnClearData" class="px-2.5 py-1 bg-white hover:bg-rose-50 border border-rose-200 rounded-lg text-rose-600 font-medium transition-colors shadow-xs">
+                    데이터 초기화
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 1: TRACKER & GRAPHS ================= -->
+        <div id="pageTracker" class="space-y-6">
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500"></div>
+                
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <span>실시간 행동 관찰 체크</span>
+                            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">원터치 입력</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-1">학생과 표적행동을 선택하고, 행동이 관측되는 즉시 강도 버튼을 탭하세요.</p>
+                    </div>
+                    <!-- Current Clock -->
+                    <div class="flex items-center space-x-2 text-right bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/70">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="liveClock" class="font-mono font-semibold text-sm text-slate-700">--:--:--</span>
+                    </div>
+                </div>
+
+                <!-- Target Selection Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                    <!-- Student Select -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">학생 선택</label>
+                        <div class="relative">
+                            <select id="selectStudent" class="w-full appearance-none bg-slate-50 border border-slate-300 hover:border-indigo-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 transition-all cursor-pointer">
+                                <!-- Injected dynamically -->
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Behavior Select -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">표적행동 선택</label>
+                        <div class="relative">
+                            <select id="selectBehavior" class="w-full appearance-none bg-slate-50 border border-slate-300 hover:border-indigo-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 transition-all cursor-pointer">
+                                <!-- Injected dynamically based on student -->
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-xs font-semibold text-slate-600 mb-2">행동 관찰 시 강도 버튼 터치 (자동 기록 & 구글 시트 저장)</label>
+                    <div class="grid grid-cols-3 gap-3 sm:gap-5">
+                        <!-- 약 (1점) -->
+                        <button id="btnIntensityLow" data-intensity="약" data-score="1" class="touch-action-manipulation group relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-emerald-50 to-emerald-100/70 border-2 border-emerald-300 hover:border-emerald-500 active:bg-emerald-200 text-emerald-900 transition-all shadow-xs hover:shadow-md cursor-pointer">
+                            <div class="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-lg mb-2 shadow-sm group-hover:scale-105 transition-transform">
+                                1
+                            </div>
+                            <span class="text-base sm:text-lg font-bold">약 (1점)</span>
+                            <span class="text-[11px] text-emerald-700/80 mt-0.5">가벼운 징후·주의환기 가능</span>
+                        </button>
+
+                        <!-- 중 (2점) -->
+                        <button id="btnIntensityMid" data-intensity="중" data-score="2" class="touch-action-manipulation group relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-amber-50 to-amber-100/70 border-2 border-amber-300 hover:border-amber-500 active:bg-amber-200 text-amber-900 transition-all shadow-xs hover:shadow-md cursor-pointer">
+                            <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-lg mb-2 shadow-sm group-hover:scale-105 transition-transform">
+                                2
+                            </div>
+                            <span class="text-base sm:text-lg font-bold">중 (2점)</span>
+                            <span class="text-[11px] text-amber-700/80 mt-0.5">명확한 방해·중재 개입 필요</span>
+                        </button>
+
+                        <!-- 강 (3점) -->
+                        <button id="btnIntensityHigh" data-intensity="강" data-score="3" class="touch-action-manipulation group relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-rose-50 to-rose-100/70 border-2 border-rose-300 hover:border-rose-500 active:bg-rose-200 text-rose-900 transition-all shadow-xs hover:shadow-md cursor-pointer">
+                            <div class="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-lg mb-2 shadow-sm group-hover:scale-105 transition-transform">
+                                3
+                            </div>
+                            <span class="text-base sm:text-lg font-bold">강 (3점)</span>
+                            <span class="text-[11px] text-rose-700/80 mt-0.5">격렬한 행동·즉각 안전 조치</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Event Feedback Strip -->
+                <div id="lastLoggedFeedback" class="mt-5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs text-slate-600 transition-all">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-slate-400">최근 기록:</span>
+                        <span id="lastLoggedInfo" class="font-medium text-slate-800">아직 기록된 행동이 없습니다.</span>
+                    </div>
+                    <div id="syncProgressText" class="font-semibold text-indigo-600 hidden flex items-center gap-1.5">
+                        <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        시트 전송 중...
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Hourly Frequency Chart (2 cols on desktop) -->
+                <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-800">시간대별 표적행동 빈도 그래프</h3>
+                                <p class="text-xs text-slate-500">하루 중 행동이 집중되는 시간대를 파악할 수 있습니다.</p>
+                            </div>
+                            <!-- Chart Filter -->
+                            <div class="flex items-center space-x-2">
+                                <select id="chartStudentFilter" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 text-slate-700 font-medium">
+                                    <option value="all">전체 학생</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="relative w-full h-64">
+                            <canvas id="hourlyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <div class="flex items-center gap-4">
+                            <span class="inline-flex items-center"><span class="w-3 h-3 rounded-sm bg-indigo-500 mr-1.5"></span>총 발생 빈도</span>
+                            <span class="inline-flex items-center"><span class="w-3 h-3 rounded-full bg-rose-500 mr-1.5"></span>평균 강도(점)</span>
+                        </div>
+                        <span id="chartTotalCount">총 0건 기록됨</span>
+                    </div>
+                </div>
+
+                <!-- Intensity Distribution & Quick Stats (1 col) -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 mb-1">강도별 비율</h3>
+                        <p class="text-xs text-slate-500 mb-3">관찰된 행동의 강도 점수 분포</p>
+                        <div class="relative w-full h-44 flex items-center justify-center">
+                            <canvas id="intensityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100 text-center">
+                        <div class="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                            <span class="block text-[11px] text-emerald-700 font-medium">약(1점)</span>
+                            <span id="statLowCount" class="text-base font-bold text-emerald-900">0</span>
+                        </div>
+                        <div class="bg-amber-50/60 p-2.5 rounded-xl border border-amber-100">
+                            <span class="block text-[11px] text-amber-700 font-medium">중(2점)</span>
+                            <span id="statMidCount" class="text-base font-bold text-amber-900">0</span>
+                        </div>
+                        <div class="bg-rose-50/60 p-2.5 rounded-xl border border-rose-100">
+                            <span class="block text-[11px] text-rose-700 font-medium">강(3점)</span>
+                            <span id="statHighCount" class="text-base font-bold text-rose-900">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">최근 관찰 타임스탬프 로그</h3>
+                        <p class="text-xs text-slate-500">실시간으로 누적된 관찰 타임라인</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="logSearchInput" placeholder="학생명 / 행동 검색..." class="text-xs border border-slate-300 rounded-lg px-3 py-1.5 focus:border-indigo-500 focus:outline-hidden">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto max-h-80 overflow-y-auto border border-slate-200 rounded-2xl">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 text-slate-500 sticky top-0 z-10 border-b border-slate-200 uppercase font-semibold">
+                            <tr>
+                                <th class="px-4 py-3">학생명 (A열)</th>
+                                <th class="px-4 py-3">표적행동 (B열)</th>
+                                <th class="px-4 py-3">타임스탬프 (C열)</th>
+                                <th class="px-4 py-3 text-center">강도 (D열)</th>
+                                <th class="px-4 py-3 text-right">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody" class="divide-y divide-slate-100 font-medium">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                    <div id="noLogsPlaceholder" class="p-8 text-center text-slate-400 text-xs">
+                        기록된 관찰 데이터가 없습니다. 상단에서 강도 버튼을 눌러 기록을 시작하세요.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 2: AI BEHAVIOR REPORT & COACHING ================= -->
+        <div id="pageAiReport" class="space-y-6 hidden">
+            <!-- Controls Card -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">Gemini AI 행동분석 & 상담 코칭 생성기</h2>
+                            <p class="text-xs text-slate-500">누적된 타임스탬프와 강도 데이터를 기반으로 맞춤형 중재 전략과 학부모 상담 가이드를 생성합니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2" id="reportControls">
+                        <button id="btnPrintReport" class="hidden px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors inline-flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            리포트 인쇄 / PDF 저장
+                        </button>
+                        <button id="btnCopyReport" class="hidden px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-xl border border-indigo-200 transition-colors inline-flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            텍스트 복사
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">분석 대상 학생</label>
+                        <select id="selectAiStudent" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 cursor-pointer">
+                            <!-- Injected dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">중재 포커스</label>
+                        <select id="selectReportFocus" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-indigo-500 cursor-pointer">
+                            <option value="comprehensive">종합 ABA 기능평가 & 맞춤 코칭</option>
+                            <option value="parent_counsel">학부모 상담 및 가정 연계 지도 가이드</option>
+                            <option value="crisis_prevention">교실 내 위기 예방 및 즉각 중재 프로토콜</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button id="btnGenerateAiReport" class="w-full py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            <span>AI 리포트 및 코칭 생성</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Teacher Note Input -->
+                <div class="mt-4">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">관찰자 추가 관찰 메모 (선택 사항)</label>
+                    <input type="text" id="inputTeacherMemo" placeholder="예: 오후 체육수업 직후에 감각 과부하로 보임, 식사 시간 전 착석 거부가 두드러짐 등" class="w-full text-xs border border-slate-300 rounded-xl px-3.5 py-2 text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500">
+                </div>
+            </div>
+
+            <!-- Report Output Card -->
+            <div id="reportResultArea" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm min-h-[300px]">
+                <!-- Initial State -->
+                <div id="aiEmptyPlaceholder" class="text-center py-12">
+                    <div class="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-4 border border-indigo-100 shadow-xs">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800">학생을 선택하고 AI 분석을 시작하세요</h3>
+                    <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">관찰 기록 데이터를 바탕으로 시간대별 피크 패턴, 3점 척도 강도 심각도, 구체적 중재 행동(BIP) 및 학부모 상담 스크립트를 생성합니다.</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="aiLoadingPlaceholder" class="hidden text-center py-16 space-y-4">
+                    <div class="inline-flex items-center justify-center p-4 rounded-2xl bg-indigo-50 text-indigo-600">
+                        <svg class="animate-spin w-8 h-8" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-800">Gemini AI가 관찰 데이터를 심층 분석 중입니다...</h4>
+                        <p class="text-xs text-slate-500 mt-1">시간대별 빈도 계산, 강도별 심각도 평가, ABA 기반 중재 코칭안을 도출하고 있습니다.</p>
+                    </div>
+                </div>
+
+                <!-- Generated Content Output Container -->
+                <div id="aiContentContainer" class="hidden space-y-6">
+                    <!-- Report Header -->
+                    <div class="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <span class="text-[11px] font-bold text-indigo-600 tracking-wider uppercase bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">ABA Clinical Behavior Analysis</span>
+                            <h2 id="reportStudentTitle" class="text-xl font-bold text-slate-900 mt-2">학생 행동분석 및 중재 코칭 리포트</h2>
+                            <p id="reportMetaInfo" class="text-xs text-slate-500 mt-0.5">데이터 분석 기간: 실시간 기록 기준</p>
+                        </div>
+                        <div id="reportStudentBadge" class="self-start sm:self-auto bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold">
+                            총 0건 분석됨
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Rendered Markdown/HTML -->
+                    <div id="aiReportContent" class="text-sm leading-relaxed text-slate-700 space-y-4">
+                        <!-- Content inserted dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">환경 설정 및 학생 관리</h3>
+                    <p class="text-xs text-slate-500">Gemini API 키 설정 및 학생별 표적행동을 관리합니다.</p>
+                </div>
+                <button id="btnCloseSettings" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Gemini API Key Configuration Section -->
+            <div class="py-4 border-b border-slate-100">
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                        Gemini API Key 설정
+                    </label>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline inline-flex items-center gap-1">
+                        무료 키 발급받기
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+                <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
+                    개인 PC나 외부 환경에서 실행할 경우 발급받은 Gemini API 키를 입력하세요. (비워두면 시스템 기본 런타임 키가 적용됩니다)
+                </p>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <input type="password" id="inputGeminiApiKey" placeholder="AIzaSy... (Gemini API 키 입력)" class="w-full text-xs font-mono border border-slate-300 rounded-xl px-3.5 py-2.5 pr-10 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 bg-slate-50">
+                        <button type="button" id="btnToggleApiKeyVisibility" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-600 text-xs" title="키 표시/숨김">
+                            👁️
+                        </button>
+                    </div>
+                    <button id="btnSaveApiKey" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition-colors shrink-0">
+                        키 저장
+                    </button>
+                </div>
+                <div id="apiKeyStatusHint" class="mt-1.5 text-[11px] text-slate-500 font-medium"></div>
+            </div>
+
+            <!-- Student Creation Section -->
+            <div class="py-4 border-b border-slate-100">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">새 학생 등록</label>
+                <div class="flex gap-2">
+                    <input type="text" id="newStudentNameInput" placeholder="학생 이름 입력 (예: 김철수)" class="flex-1 text-sm border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
+                    <button id="btnAddStudent" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-colors">
+                        학생 추가
+                    </button>
+                </div>
+            </div>
+
+            <!-- Student List & Assigned Behaviors Management -->
+            <div class="flex-1 overflow-y-auto py-4 space-y-4 pr-1" id="studentsConfigList">
+                <!-- Injected via JavaScript -->
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex justify-end">
+                <button id="btnSaveAndCloseSettings" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-colors">
+                    설정 완료 및 닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sheetsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl max-h-[92vh] flex flex-col">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H6v-2h6v2zm4-4H6v-2h10v2zm0-4H6V7h10v2z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">구글 스프레드시트 자동 분리 연동</h3>
+                        <p class="text-xs text-slate-500">학생별 시트 자동 생성 및 실시간 타임스탬프 전송 설정</p>
+                    </div>
+                </div>
+                <button id="btnCloseSheetsGuide" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto py-4 space-y-5 text-xs text-slate-600">
+                <!-- Endpoint input -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <label class="block font-semibold text-slate-800 mb-1">구글 앱스 스크립트 웹 앱 URL (Web App URL)</label>
+                    <p class="text-[11px] text-slate-500 mb-2">아래 가이드를 통해 배포한 웹 앱 URL을 붙여넣으세요.</p>
+                    <div class="flex gap-2">
+                        <input type="url" id="sheetsWebhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
+                        <button id="btnSaveWebhookUrl" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">
+                            저장 및 테스트
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Explanation Steps -->
+                <div class="space-y-3">
+                    <h4 class="font-bold text-slate-800 text-sm">연동 방법 (1분 소요):</h4>
+                    <ol class="list-decimal list-inside space-y-2 text-slate-700 leading-relaxed bg-amber-50/50 p-4 rounded-2xl border border-amber-100">
+                        <li>새 <a href="https://sheets.new" target="_blank" class="text-indigo-600 font-semibold underline">구글 스프레드시트</a>를 하나 생성합니다.</li>
+                        <li>상단 메뉴에서 <strong>[확장 프로그램] → [Apps Script]</strong>를 클릭합니다.</li>
+                        <li>열리는 코드 에디터의 내용을 모두 지우고, 아래의 <strong>[코드 복사하기]</strong> 버튼을 눌러 붙여넣습니다.</li>
+                        <li>우측 상단 <strong>[배포] → [새 배포]</strong> 선택 후 유형을 <strong>웹 앱(Web App)</strong>으로 지정합니다.</li>
+                        <li><strong>액세스 권한이 있는 사용자</strong>를 <strong>'모든 사용자(Anyone)'</strong>로 설정하고 [배포]를 누릅니다.</li>
+                        <li>발급된 웹 앱 URL을 복사하여 위 입력창에 붙여넣고 [저장]하면 끝납니다!</li>
+                    </ol>
+                </div>
+
+                <!-- Apps Script Code Box with Copy Button -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="font-bold text-slate-800">구글 시트 백엔드 스크립트 (자동 시트 분리 & 헤더 생성)</span>
+                        <button id="btnCopyScript" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-medium rounded-lg transition-colors">
+                            코드 복사하기
+                        </button>
+                    </div>
+                    <pre class="bg-slate-900 text-slate-100 p-4 rounded-2xl font-mono text-[11px] leading-relaxed overflow-x-auto max-h-56 select-all"><code id="codeAppsScript">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var studentName = data.student || "미지정";
+    var behavior = data.behavior || "미지정";
+    var timestamp = data.timestamp || Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd HH:mm:ss");
+    var intensity = data.intensity || "보통";
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    // 학생명을 이름으로 하는 시트 확인 또는 새로 생성
+    var sheet = ss.getSheetByName(studentName);
+    if (!sheet) {
+      sheet = ss.insertSheet(studentName);
+      // 요구하신 표준 헤더 자동 생성
+      // A1: 학생명, B1: 표적행동, C1: 타임스탬프, D1: 강도
+      sheet.getRange(1, 1, 1, 4).setValues([["학생명", "표적행동", "타임스탬프", "강도"]]);
+      sheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#f1f5f9");
+      sheet.setFrozenRows(1);
+    }
+
+    // 새로운 행동 기록 행 추가
+    sheet.appendRow([studentName, behavior, timestamp, intensity]);
+
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Custom Confirm / Alert Modal Dialog -->
+    <div id="customModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center">
+            <div id="modalIconContainer" class="w-12 h-12 rounded-full mx-auto flex items-center justify-center mb-3"></div>
+            <h4 id="modalTitle" class="text-base font-bold text-slate-900 mb-1">알림</h4>
+            <p id="modalMessage" class="text-xs text-slate-500 mb-5 leading-relaxed">내용</p>
+            <div class="flex space-x-2">
+                <button id="btnModalCancel" class="flex-1 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl hidden transition-colors">
+                    취소
+                </button>
+                <button id="btnModalConfirm" class="flex-1 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors">
+                    확인
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY_STUDENTS = 'aba_students_config_v1';
+        const STORAGE_KEY_LOGS = 'aba_observation_logs_v1';
+        const STORAGE_KEY_SHEETS_URL = 'aba_sheets_webhook_url_v1';
+
+        // Initial default configuration if fresh
+        const DEFAULT_STUDENTS = [
+            {
+                id: 's_1',
+                name: '김민수',
+                behaviors: ['자리 이탈', '소리 지르기', '타인 꼬집기', '과제 거부']
+            },
+            {
+                id: 's_2',
+                name: '이지원',
+                behaviors: ['손톱 물어뜯기', '책상 치기', '상동 행동']
+            },
+            {
+                id: 's_3',
+                name: '박서준',
+                behaviors: ['교실 밖 뛰어나가기', '물건 던지기']
+            }
+        ];
+
+        let state = {
+            students: [],
+            logs: [],
+            sheetsWebhookUrl: '',
+            geminiApiKey: '',
+            selectedStudentId: null,
+            selectedBehavior: null,
+            currentTab: 'tracker',
+            charts: {
+                hourly: null,
+                intensity: null
+            },
+            synth: null,
+            currentReportText: ''
+        };
+
+        function initData() {
+            try {
+                // In-memory single session fallback with memory array
+                const savedStudents = window.__STUDENT_STORE || null;
+                const savedLogs = window.__LOGS_STORE || null;
+                const savedWebhook = window.__SHEETS_STORE || null;
+                const savedApiKey = window.__GEMINI_KEY_STORE || null;
+
+                state.students = savedStudents ? savedStudents : JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
+                state.logs = savedLogs || [];
+                state.sheetsWebhookUrl = savedWebhook || '';
+                state.geminiApiKey = savedApiKey || '';
+                
+                if (state.students.length > 0) {
+                    state.selectedStudentId = state.students[0].id;
+                    state.selectedBehavior = state.students[0].behaviors[0] || null;
+                }
+            } catch (e) {
+                state.students = JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
+                state.logs = [];
+            }
+        }
+
+        function persistState() {
+            window.__STUDENT_STORE = state.students;
+            window.__LOGS_STORE = state.logs;
+            window.__SHEETS_STORE = state.sheetsWebhookUrl;
+            window.__GEMINI_KEY_STORE = state.geminiApiKey;
+        }
+
+        function initSound() {
+            if (!state.synth && window.Tone) {
+                state.synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }
+                }).toDestination();
+                state.synth.volume.value = -8;
+            }
+        }
+
+        function playFeedbackSound(intensity) {
+            try {
+                if (Tone && Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                initSound();
+                if (!state.synth) return;
+
+                if (intensity === '약') {
+                    state.synth.triggerAttackRelease('C5', '0.08');
+                } else if (intensity === '중') {
+                    state.synth.triggerAttackRelease(['E5', 'G5'], '0.1');
+                } else {
+                    state.synth.triggerAttackRelease(['G5', 'C6'], '0.15');
+                }
+            } catch (err) {
+                // Ignore audio context block
+            }
+        }
+
+        function formatFullTimestamp(dateObj = new Date()) {
+            const pad = (n) => String(n).padStart(2, '0');
+            const year = dateObj.getFullYear();
+            const month = pad(dateObj.getMonth() + 1);
+            const day = pad(dateObj.getDate());
+            const hours = pad(dateObj.getHours());
+            const minutes = pad(dateObj.getMinutes());
+            const seconds = pad(dateObj.getSeconds());
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        function formatDisplayTime(dateObj = new Date()) {
+            return dateObj.toLocaleTimeString('ko-KR', { hour12: false });
+        }
+
+        function renderSelectors() {
+            const studentSelect = document.getElementById('selectStudent');
+            const behaviorSelect = document.getElementById('selectBehavior');
+            const chartFilter = document.getElementById('chartStudentFilter');
+            const aiStudentSelect = document.getElementById('selectAiStudent');
+
+            // Populate Student Select
+            studentSelect.innerHTML = '';
+            chartFilter.innerHTML = '<option value="all">전체 학생</option>';
+            if (aiStudentSelect) aiStudentSelect.innerHTML = '';
+
+            if (state.students.length === 0) {
+                studentSelect.innerHTML = '<option value="">(등록된 학생 없음)</option>';
+                behaviorSelect.innerHTML = '<option value="">(행동 없음)</option>';
+                if (aiStudentSelect) aiStudentSelect.innerHTML = '<option value="">(등록된 학생 없음)</option>';
+                return;
+            }
+
+            state.students.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                if (s.id === state.selectedStudentId) opt.selected = true;
+                studentSelect.appendChild(opt);
+
+                const filterOpt = document.createElement('option');
+                filterOpt.value = s.name;
+                filterOpt.textContent = s.name;
+                chartFilter.appendChild(filterOpt);
+
+                if (aiStudentSelect) {
+                    const aiOpt = document.createElement('option');
+                    aiOpt.value = s.name;
+                    aiOpt.textContent = `${s.name} (${s.behaviors.join(', ') || '행동 미지정'})`;
+                    aiStudentSelect.appendChild(aiOpt);
+                }
+            });
+
+            // Populate Behavior Select for current student
+            renderBehaviorOptions();
+        }
+
+        function renderBehaviorOptions() {
+            const behaviorSelect = document.getElementById('selectBehavior');
+            behaviorSelect.innerHTML = '';
+
+            const currentStudent = state.students.find(s => s.id === state.selectedStudentId);
+            if (!currentStudent || !currentStudent.behaviors || currentStudent.behaviors.length === 0) {
+                behaviorSelect.innerHTML = '<option value="">등록된 표적행동이 없습니다 (설정에서 추가)</option>';
+                state.selectedBehavior = null;
+                return;
+            }
+
+            currentStudent.behaviors.forEach((beh, idx) => {
+                const opt = document.createElement('option');
+                opt.value = beh;
+                opt.textContent = beh;
+                if (beh === state.selectedBehavior || idx === 0 && !state.selectedBehavior) {
+                    opt.selected = true;
+                    state.selectedBehavior = beh;
+                }
+                behaviorSelect.appendChild(opt);
+            });
+        }
+
+        function renderLogsTable(searchTerm = '') {
+            const tbody = document.getElementById('logsTableBody');
+            const placeholder = document.getElementById('noLogsPlaceholder');
+            tbody.innerHTML = '';
+
+            const term = searchTerm.trim().toLowerCase();
+            const filtered = state.logs.filter(log => {
+                if (!term) return true;
+                return log.student.toLowerCase().includes(term) || log.behavior.toLowerCase().includes(term);
+            });
+
+            if (filtered.length === 0) {
+                placeholder.classList.remove('hidden');
+                return;
+            } else {
+                placeholder.classList.add('hidden');
+            }
+
+            filtered.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+
+                const badgeStyle = log.intensity === '강' 
+                    ? 'bg-rose-100 text-rose-800 border-rose-200' 
+                    : log.intensity === '중' 
+                    ? 'bg-amber-100 text-amber-800 border-amber-200' 
+                    : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-slate-900">${escapeHtml(log.student)}</td>
+                    <td class="px-4 py-3 text-slate-700">${escapeHtml(log.behavior)}</td>
+                    <td class="px-4 py-3 text-slate-500 font-mono text-[11px]">${log.timestamp}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${badgeStyle}">
+                            ${log.intensity} (${log.score}점)
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="deleteLog('${log.id}')" class="text-slate-400 hover:text-rose-600 transition-colors p-1" title="기록 삭제">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function recordBehavior(intensityLabel, score) {
+            const currentStudent = state.students.find(s => s.id === state.selectedStudentId);
+            if (!currentStudent) {
+                showToast('먼저 학생을 설정에서 등록해 주세요.', 'error');
+                return;
+            }
+
+            if (!state.selectedBehavior) {
+                showToast('표적행동이 선택되지 않았습니다. 설정에서 행동을 추가해 주세요.', 'error');
+                return;
+            }
+
+            const timestamp = formatFullTimestamp();
+            const logEntry = {
+                id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                student: currentStudent.name,
+                behavior: state.selectedBehavior,
+                timestamp: timestamp,
+                intensity: intensityLabel,
+                score: score,
+                synced: false
+            };
+
+            // Prepend new record to state
+            state.logs.unshift(logEntry);
+            persistState();
+
+            // Sound and feedback
+            playFeedbackSound(intensityLabel);
+            showToast(`[${currentStudent.name}] ${state.selectedBehavior} (강도: ${intensityLabel}) 기록 완료!`, 'success');
+
+            // Update UI
+            document.getElementById('lastLoggedInfo').textContent = `${currentStudent.name} - ${state.selectedBehavior} (${intensityLabel}, ${timestamp.split(' ')[1]})`;
+            renderLogsTable(document.getElementById('logSearchInput').value);
+            updateCharts();
+
+            // Push to Google Sheets if configured
+            if (state.sheetsWebhookUrl && state.sheetsWebhookUrl.startsWith('http')) {
+                syncRecordToGoogleSheet(logEntry);
+            }
+        }
+
+        async function syncRecordToGoogleSheet(logEntry) {
+            const progressEl = document.getElementById('syncProgressText');
+            progressEl.classList.remove('hidden');
+
+            try {
+                // Using mode: 'no-cors' for Apps Script deployment webhook compatibility
+                await fetch(state.sheetsWebhookUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student: logEntry.student,
+                        behavior: logEntry.behavior,
+                        timestamp: logEntry.timestamp,
+                        intensity: `${logEntry.intensity} (${logEntry.score}점)`
+                    })
+                });
+
+                logEntry.synced = true;
+                persistState();
+                triggerSyncPulse();
+            } catch (error) {
+                console.error('Google Sheet Sync Error:', error);
+                showToast('구글 시트 전송 중 일시적 오류가 발생했습니다. (기록은 앱에 저장됨)', 'warning');
+            } finally {
+                progressEl.classList.add('hidden');
+            }
+        }
+
+        function triggerSyncPulse() {
+            const dot = document.getElementById('syncDot');
+            const pulse = document.getElementById('syncPulse');
+            pulse.classList.remove('hidden');
+            dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
+            setTimeout(() => {
+                pulse.classList.add('hidden');
+            }, 1500);
+        }
+
+        function initCharts() {
+            const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+            const intensityCtx = document.getElementById('intensityChart').getContext('2d');
+
+            const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}시`);
+
+            state.charts.hourly = new Chart(hourlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: hours,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: '발생 빈도(회)',
+                            data: Array(24).fill(0),
+                            backgroundColor: 'rgba(99, 102, 241, 0.75)',
+                            hoverBackgroundColor: 'rgba(79, 70, 229, 0.9)',
+                            borderRadius: 6,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: '평균 강도',
+                            data: Array(24).fill(null),
+                            borderColor: '#f43f5e',
+                            backgroundColor: '#f43f5e',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, font: { size: 10 } },
+                            title: { display: true, text: '빈도(회)', font: { size: 10 } }
+                        },
+                        y1: {
+                            position: 'right',
+                            min: 0,
+                            max: 3.5,
+                            grid: { drawOnChartArea: false },
+                            ticks: { stepSize: 1, font: { size: 10 } },
+                            title: { display: true, text: '평균 강도(1~3)', font: { size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            padding: 8,
+                            titleFont: { size: 11 },
+                            bodyFont: { size: 11 }
+                        }
+                    }
+                }
+            });
+
+            state.charts.intensity = new Chart(intensityCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['약 (1점)', '중 (2점)', '강 (3점)'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!state.charts.hourly || !state.charts.intensity) return;
+
+            const selectedFilter = document.getElementById('chartStudentFilter').value;
+            const relevantLogs = selectedFilter === 'all' 
+                ? state.logs 
+                : state.logs.filter(l => l.student === selectedFilter);
+
+            // Compute Hourly counts and averages
+            const hourlyCounts = Array(24).fill(0);
+            const hourlyScoreSums = Array(24).fill(0);
+
+            let lowCount = 0;
+            let midCount = 0;
+            let highCount = 0;
+
+            relevantLogs.forEach(log => {
+                const hour = parseInt(log.timestamp.split(' ')[1].split(':')[0], 10);
+                if (!isNaN(hour) && hour >= 0 && hour < 24) {
+                    hourlyCounts[hour]++;
+                    hourlyScoreSums[hour] += log.score;
+                }
+
+                if (log.score === 1) lowCount++;
+                else if (log.score === 2) midCount++;
+                else if (log.score === 3) highCount++;
+            });
+
+            const hourlyAvgScores = hourlyCounts.map((count, idx) => {
+                return count > 0 ? (hourlyScoreSums[idx] / count).toFixed(1) : null;
+            });
+
+            // Update Hourly Bar & Line
+            state.charts.hourly.data.datasets[0].data = hourlyCounts;
+            state.charts.hourly.data.datasets[1].data = hourlyAvgScores;
+            state.charts.hourly.update();
+
+            // Update Intensity Doughnut
+            state.charts.intensity.data.datasets[0].data = [lowCount, midCount, highCount];
+            state.charts.intensity.update();
+
+            // Update quick text metrics
+            document.getElementById('statLowCount').textContent = lowCount;
+            document.getElementById('statMidCount').textContent = midCount;
+            document.getElementById('statHighCount').textContent = highCount;
+            document.getElementById('chartTotalCount').textContent = `총 ${relevantLogs.length}건 기록됨`;
+        }
+
+        async function callGeminiApiWithRetry(prompt, systemInstruction, maxRetries = 3) {
+            // 사용자 지정 키가 설정되어 있으면 해당 키를 사용하고, 없으면 빈 문자열(자동 주입)을 사용
+            const apiKey = state.geminiApiKey ? state.geminiApiKey.trim() : "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                }
+            };
+
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        const errMsg = errorData.error?.message || `HTTP ${response.status}`;
+                        throw new Error(errMsg);
+                    }
+
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) return text;
+                    throw new Error('응답 데이터에 텍스트가 없습니다.');
+                } catch (err) {
+                    if (i === maxRetries - 1) throw err;
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        function formatAiReportToHtml(markdownText) {
+            // Enhanced lightweight markdown formatter for rich clinical report display
+            let html = markdownText
+                .replace(/^### (.*$)/gim, '<h3 class="text-base font-bold text-indigo-950 mt-5 mb-2 pb-1 border-b border-indigo-100 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-600 inline-block"></span>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold text-slate-900 mt-6 mb-3 pb-1 border-b-2 border-indigo-200 text-indigo-900">$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold text-slate-900 mt-6 mb-3">$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900 bg-amber-50 px-1 py-0.5 rounded">$1</strong>')
+                .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc text-slate-700 my-1">$1</li>')
+                .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc text-slate-700 my-1">$1</li>')
+                .replace(/^\d+\. (.*$)/gim, '<li class="ml-4 list-decimal text-slate-700 my-1 font-medium">$1</li>')
+                .replace(/\n\n/g, '<p class="my-3 text-slate-700 leading-relaxed"></p>');
+
+            return html;
+        }
+
+        async function generateAiReport() {
+            const studentName = document.getElementById('selectAiStudent').value;
+            const focus = document.getElementById('selectReportFocus').value;
+            const memo = document.getElementById('inputTeacherMemo').value.trim();
+
+            if (!studentName) {
+                showToast('분석할 학생을 먼저 선택해 주세요.', 'warning');
+                return;
+            }
+
+            const studentLogs = state.logs.filter(l => l.student === studentName);
+            if (studentLogs.length === 0) {
+                showToast(`'${studentName}' 학생의 기록된 관찰 데이터가 없습니다. 먼저 상단에서 행동을 기록해 주세요.`, 'warning');
+                return;
+            }
+
+            // Summarize Statistics for Gemini
+            const total = studentLogs.length;
+            const hourlyCounts = {};
+            const behaviorCounts = {};
+            let low = 0, mid = 0, high = 0;
+
+            studentLogs.forEach(l => {
+                const hour = l.timestamp.split(' ')[1].split(':')[0] + '시';
+                hourlyCounts[hour] = (hourlyCounts[hour] || 0) + 1;
+                behaviorCounts[l.behavior] = (behaviorCounts[l.behavior] || 0) + 1;
+
+                if (l.score === 1) low++;
+                else if (l.score === 2) mid++;
+                else if (l.score === 3) high++;
+            });
+
+            // Find peak hours
+            const peakHours = Object.entries(hourlyCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([h, c]) => `${h}(${c}회)`)
+                .join(', ');
+
+            const behaviorBreakdown = Object.entries(behaviorCounts)
+                .map(([b, c]) => `${b}: ${c}회`)
+                .join(', ');
+
+            // UI Switch to Loading
+            document.getElementById('aiEmptyPlaceholder').classList.add('hidden');
+            document.getElementById('aiContentContainer').classList.add('hidden');
+            document.getElementById('aiLoadingPlaceholder').classList.remove('hidden');
+            document.getElementById('btnGenerateAiReport').disabled = true;
+
+            const systemInstruction = `당신은 최고 수준의 특수교육 임상 전문가이자 국제공인행동분석가(BCBA)입니다.
+교사가 수집한 실시간 관찰 기록 데이터(행동 빈도, 타임스탬프, 3점 척도 강도)를 바탕으로, 즉시 현장에서 적용 가능한 매우 과학적이고 온정적인 "행동분석 및 개별화 중재 코칭 리포트"를 작성해 주십시오.
+출력은 한국어로, 정중하고 신뢰감 있는 전문가 어조(해요체 또는 하십시오체)로 작성하며, 마크다운(#, ##, ###, **, -)을 적극 활용하여 가독성을 극대화하십시오.`;
+
+            let prompt = `[대상 학생]: ${studentName}
+[총 관찰 기록 건수]: ${total}건
+[표적행동별 발생 빈도]: ${behaviorBreakdown}
+[강도 3점 척도 분포]: 약(1점) ${low}건, 중(2점) ${mid}건, 강(3점) ${high}건
+[주요 발생 시간대 피크]: ${peakHours}
+[관찰자 특이 메모]: ${memo || '특이 메모 없음'}
+[중재 포커스 설정]: ${focus}
+
+아래 형식에 맞추어 종합 보고서를 작성해 주십시오:
+1. 📋 행동 패턴 심층 진단 요약 (피크 시간대 원인 분석, 감각/환경적 유발 요인 가설 제시)
+2. ⚡ 3점 척도 강도(약·중·강) 심각도 평가 및 안전 리스크 판단
+3. 🎯 행동 중재 계획(BIP) 전략
+   - 선행사건 예방 조작 (Antecedent strategies - 피크 시간 직전 실행 방안)
+   - 대체행동 지도 및 차별강화 방안 (FERB & DRA/DRI)
+   - 강도 3점(고위험) 발생 시 즉각 위기 대처 프로토콜
+4. 💬 ${focus === 'parent_counsel' ? '학부모 상담 전용 스크립트 및 가정 연계 팁 (부모님의 불안을 덜고 신뢰를 형성하는 대화법 포함)' : '교사용 현장 코칭 팁 & 학부모 공유 가이드 요약'}`;
+
+            try {
+                const reportText = await callGeminiApiWithRetry(prompt, systemInstruction);
+                state.currentReportText = reportText;
+
+                // Render result
+                document.getElementById('reportStudentTitle').textContent = `${studentName} 학생 행동분석 & 개별화 중재 코칭 리포트`;
+                document.getElementById('reportMetaInfo').textContent = `분석 일시: ${new Date().toLocaleString('ko-KR')} | 분석된 총 관측 건수: ${total}건`;
+                document.getElementById('reportStudentBadge').textContent = `피크 시간대: ${peakHours || '분산됨'}`;
+
+                document.getElementById('aiReportContent').innerHTML = formatAiReportToHtml(reportText);
+
+                document.getElementById('aiLoadingPlaceholder').classList.add('hidden');
+                document.getElementById('aiContentContainer').classList.remove('hidden');
+                document.getElementById('btnCopyReport').classList.remove('hidden');
+                document.getElementById('btnPrintReport').classList.remove('hidden');
+
+                showToast(`${studentName} 학생의 AI 리포트가 성공적으로 생성되었습니다.`, 'success');
+            } catch (error) {
+                console.error('Gemini Report Error:', error);
+                document.getElementById('aiLoadingPlaceholder').classList.add('hidden');
+                document.getElementById('aiEmptyPlaceholder').classList.remove('hidden');
+                showToast('AI 리포트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+            } finally {
+                document.getElementById('btnGenerateAiReport').disabled = false;
+            }
+        }
+
+        function switchTab(targetTab) {
+            state.currentTab = targetTab;
+            const trackerTabBtn = document.getElementById('tabTrackerBtn');
+            const aiTabBtn = document.getElementById('tabAiReportBtn');
+            const pageTracker = document.getElementById('pageTracker');
+            const pageAiReport = document.getElementById('pageAiReport');
+
+            if (targetTab === 'tracker') {
+                trackerTabBtn.className = 'py-3 px-4 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 flex items-center space-x-2 transition-all';
+                aiTabBtn.className = 'py-3 px-4 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition-all';
+                pageTracker.classList.remove('hidden');
+                pageAiReport.classList.add('hidden');
+                updateCharts();
+            } else {
+                trackerTabBtn.className = 'py-3 px-4 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition-all';
+                aiTabBtn.className = 'py-3 px-4 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 flex items-center space-x-2 transition-all';
+                pageTracker.classList.add('hidden');
+                pageAiReport.classList.remove('hidden');
+            }
+        }
+
+        function renderSettingsStudentList() {
+            const listContainer = document.getElementById('studentsConfigList');
+            listContainer.innerHTML = '';
+
+            if (state.students.length === 0) {
+                listContainer.innerHTML = '<div class="p-6 text-center text-slate-400 text-xs">등록된 학생이 없습니다. 상단에서 학생을 추가하세요.</div>';
+                return;
+            }
+
+            state.students.forEach(student => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50 border border-slate-200 rounded-2xl p-4 transition-all';
+                
+                const behaviorsBadges = student.behaviors.map((b, idx) => `
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-700 shadow-2xs">
+                        <span>${escapeHtml(b)}</span>
+                        <button onclick="removeBehavior('${student.id}', ${idx})" class="ml-1.5 text-slate-400 hover:text-rose-500 font-bold">×</button>
+                    </span>
+                `).join('');
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-slate-900 text-sm">${escapeHtml(student.name)}</span>
+                            <span class="text-[11px] text-slate-400">(표적행동 ${student.behaviors.length}개)</span>
+                        </div>
+                        <button onclick="removeStudent('${student.id}')" class="text-xs text-rose-600 hover:text-rose-700 font-medium px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors">
+                            학생 삭제
+                        </button>
+                    </div>
+                    
+                    <div class="mb-3 flex flex-wrap gap-1.5 min-h-[28px]">
+                        ${behaviorsBadges || '<span class="text-slate-400 text-xs">등록된 표적행동이 없습니다.</span>'}
+                    </div>
+
+                    <div class="flex gap-2 pt-2 border-t border-slate-200/60">
+                        <input type="text" id="input_beh_${student.id}" placeholder="새 표적행동 입력 (예: 자리이탈)" class="flex-1 text-xs border border-slate-300 rounded-xl px-3 py-1.5 bg-white focus:outline-hidden focus:ring-1 focus:ring-indigo-400">
+                        <button onclick="addBehaviorToStudent('${student.id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium rounded-xl transition-colors">
+                            행동 추가
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        window.removeStudent = function(studentId) {
+            const student = state.students.find(s => s.id === studentId);
+            if (!student) return;
+
+            showModalDialog({
+                title: '학생 삭제',
+                message: `'${student.name}' 학생과 설정된 표적행동을 삭제하시겠습니까?`,
+                isDestructive: true,
+                onConfirm: () => {
+                    state.students = state.students.filter(s => s.id !== studentId);
+                    if (state.selectedStudentId === studentId) {
+                        state.selectedStudentId = state.students.length > 0 ? state.students[0].id : null;
+                    }
+                    persistState();
+                    renderSettingsStudentList();
+                    renderSelectors();
+                    updateCharts();
+                    showToast('학생이 삭제되었습니다.', 'info');
+                }
+            });
+        };
+
+        window.removeBehavior = function(studentId, behaviorIndex) {
+            const student = state.students.find(s => s.id === studentId);
+            if (!student) return;
+            student.behaviors.splice(behaviorIndex, 1);
+            persistState();
+            renderSettingsStudentList();
+            renderSelectors();
+        };
+
+        window.addBehaviorToStudent = function(studentId) {
+            const input = document.getElementById(`input_beh_${studentId}`);
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) {
+                showToast('표적행동 명칭을 입력해 주세요.', 'warning');
+                return;
+            }
+
+            const student = state.students.find(s => s.id === studentId);
+            if (student) {
+                if (student.behaviors.includes(val)) {
+                    showToast('이미 존재하는 행동입니다.', 'warning');
+                    return;
+                }
+                student.behaviors.push(val);
+                input.value = '';
+                persistState();
+                renderSettingsStudentList();
+                renderSelectors();
+                showToast(`'${val}' 표적행동이 추가되었습니다.`, 'success');
+            }
+        };
+
+        window.deleteLog = function(logId) {
+            state.logs = state.logs.filter(l => l.id !== logId);
+            persistState();
+            renderLogsTable(document.getElementById('logSearchInput').value);
+            updateCharts();
+            showToast('관찰 기록이 삭제되었습니다.', 'info');
+        };
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const bgClass = type === 'success' ? 'bg-emerald-600 text-white' :
+                            type === 'error' ? 'bg-rose-600 text-white' :
+                            type === 'warning' ? 'bg-amber-600 text-white' :
+                            'bg-slate-800 text-white';
+
+            toast.className = `${bgClass} px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center space-x-2 pointer-events-auto transform transition-all duration-300 translate-y-4 opacity-0`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function showModalDialog({ title, message, onConfirm, isDestructive = false }) {
+            const modal = document.getElementById('customModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            const iconContainer = document.getElementById('modalIconContainer');
+            const btnConfirm = document.getElementById('btnModalConfirm');
+            const btnCancel = document.getElementById('btnModalCancel');
+
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+
+            if (isDestructive) {
+                iconContainer.className = 'w-12 h-12 rounded-full mx-auto flex items-center justify-center mb-3 bg-rose-100 text-rose-600';
+                iconContainer.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
+                btnConfirm.className = 'flex-1 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors';
+            } else {
+                iconContainer.className = 'w-12 h-12 rounded-full mx-auto flex items-center justify-center mb-3 bg-indigo-100 text-indigo-600';
+                iconContainer.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+                btnConfirm.className = 'flex-1 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors';
+            }
+
+            btnCancel.classList.remove('hidden');
+
+            const handleConfirm = () => {
+                modal.classList.add('hidden');
+                cleanup();
+                if (onConfirm) onConfirm();
+            };
+
+            const handleCancel = () => {
+                modal.classList.add('hidden');
+                cleanup();
+            };
+
+            function cleanup() {
+                btnConfirm.removeEventListener('click', handleConfirm);
+                btnCancel.removeEventListener('click', handleCancel);
+            }
+
+            btnConfirm.addEventListener('click', handleConfirm);
+            btnCancel.addEventListener('click', handleCancel);
+
+            modal.classList.remove('hidden');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            });
+        }
+
+        function bindEvents() {
+            // Live Digital Clock
+            setInterval(() => {
+                document.getElementById('liveClock').textContent = formatDisplayTime();
+            }, 1000);
+            document.getElementById('liveClock').textContent = formatDisplayTime();
+
+            // Tabs Navigation
+            document.getElementById('tabTrackerBtn').addEventListener('click', () => switchTab('tracker'));
+            document.getElementById('tabAiReportBtn').addEventListener('click', () => switchTab('aiReport'));
+
+            // Selector Change Handlers
+            document.getElementById('selectStudent').addEventListener('change', (e) => {
+                state.selectedStudentId = e.target.value;
+                renderBehaviorOptions();
+            });
+
+            document.getElementById('selectBehavior').addEventListener('change', (e) => {
+                state.selectedBehavior = e.target.value;
+            });
+
+            // 3-Point Intensity Buttons Click
+            const intensityBtns = [
+                document.getElementById('btnIntensityLow'),
+                document.getElementById('btnIntensityMid'),
+                document.getElementById('btnIntensityHigh')
+            ];
+
+            intensityBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btn.classList.add('pulse-record');
+                    setTimeout(() => btn.classList.remove('pulse-record'), 400);
+
+                    const intensity = btn.getAttribute('data-intensity');
+                    const score = parseInt(btn.getAttribute('data-score'), 10);
+                    recordBehavior(intensity, score);
+                });
+            });
+
+            // Filter on Chart
+            document.getElementById('chartStudentFilter').addEventListener('change', updateCharts);
+
+            // Search Filter on Table
+            document.getElementById('logSearchInput').addEventListener('input', (e) => {
+                renderLogsTable(e.target.value);
+            });
+
+            // Update API Key Status Text
+            function updateApiKeyStatusUi() {
+                const hintEl = document.getElementById('apiKeyStatusHint');
+                if (!hintEl) return;
+                if (state.geminiApiKey && state.geminiApiKey.trim()) {
+                    hintEl.innerHTML = `<span class="text-emerald-600 font-semibold">✓ 사용자 API 키가 설정되어 있습니다.</span> (${state.geminiApiKey.slice(0, 7)}•••••)`;
+                } else {
+                    hintEl.innerHTML = `<span class="text-slate-400">설정된 키 없음 (Canvas 플랫폼 환경의 기본 키가 사용됩니다)</span>`;
+                }
+            }
+
+            // Toggle API Key Input Visibility
+            document.getElementById('btnToggleApiKeyVisibility').addEventListener('click', () => {
+                const input = document.getElementById('inputGeminiApiKey');
+                input.type = input.type === 'password' ? 'text' : 'password';
+            });
+
+            // Save API Key Button
+            document.getElementById('btnSaveApiKey').addEventListener('click', () => {
+                const input = document.getElementById('inputGeminiApiKey');
+                state.geminiApiKey = input.value.trim();
+                persistState();
+                updateApiKeyStatusUi();
+                showToast(state.geminiApiKey ? 'Gemini API 키가 저장되었습니다.' : 'API 키가 초기화되었습니다 (기본 모드 적용).', 'success');
+            });
+
+            // Settings Modal Open/Close
+            const settingsModal = document.getElementById('settingsModal');
+            document.getElementById('btnOpenSettings').addEventListener('click', () => {
+                renderSettingsStudentList();
+                const keyInput = document.getElementById('inputGeminiApiKey');
+                if (keyInput) keyInput.value = state.geminiApiKey || '';
+                updateApiKeyStatusUi();
+                settingsModal.classList.remove('hidden');
+            });
+            document.getElementById('btnCloseSettings').addEventListener('click', () => {
+                settingsModal.classList.add('hidden');
+            });
+            document.getElementById('btnSaveAndCloseSettings').addEventListener('click', () => {
+                // 자동 저장 처리
+                const keyInput = document.getElementById('inputGeminiApiKey');
+                if (keyInput) {
+                    state.geminiApiKey = keyInput.value.trim();
+                    persistState();
+                }
+                settingsModal.classList.add('hidden');
+            });
+
+            // Add New Student
+            document.getElementById('btnAddStudent').addEventListener('click', () => {
+                const input = document.getElementById('newStudentNameInput');
+                const name = input.value.trim();
+                if (!name) {
+                    showToast('학생 이름을 입력하세요.', 'warning');
+                    return;
+                }
+                const newId = 's_' + Date.now();
+                state.students.push({
+                    id: newId,
+                    name: name,
+                    behaviors: ['표적행동 1']
+                });
+                if (!state.selectedStudentId) {
+                    state.selectedStudentId = newId;
+                }
+                input.value = '';
+                persistState();
+                renderSettingsStudentList();
+                renderSelectors();
+                showToast(`학생 '${name}'이(가) 등록되었습니다.`, 'success');
+            });
+
+            // Sheets Modal Open/Close
+            const sheetsModal = document.getElementById('sheetsModal');
+            document.getElementById('btnOpenSheetsGuide').addEventListener('click', () => {
+                document.getElementById('sheetsWebhookUrlInput').value = state.sheetsWebhookUrl || '';
+                sheetsModal.classList.remove('hidden');
+            });
+            document.getElementById('btnCloseSheetsGuide').addEventListener('click', () => {
+                sheetsModal.classList.add('hidden');
+            });
+
+            // Save Webhook URL
+            document.getElementById('btnSaveWebhookUrl').addEventListener('click', () => {
+                const val = document.getElementById('sheetsWebhookUrlInput').value.trim();
+                state.sheetsWebhookUrl = val;
+                persistState();
+                updateSyncBannerStatus();
+                showToast('구글 시트 연동 URL이 저장되었습니다!', 'success');
+            });
+
+            // Copy Apps Script
+            document.getElementById('btnCopyScript').addEventListener('click', () => {
+                const codeText = document.getElementById('codeAppsScript').innerText;
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = codeText;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('구글 앱스 스크립트 코드가 클립보드에 복사되었습니다!', 'success');
+                } catch (e) {
+                    showToast('복사에 실패했습니다. 직접 드래그하여 복사하세요.', 'error');
+                }
+                document.body.removeChild(tempTextArea);
+            });
+
+            // CSV Export
+            document.getElementById('btnExportCsv').addEventListener('click', exportLogsToCsv);
+
+            // Clear All Data
+            document.getElementById('btnClearData').addEventListener('click', () => {
+                showModalDialog({
+                    title: '기록 초기화',
+                    message: '누적된 모든 관찰 기록을 삭제하시겠습니까? (학생 및 행동 설정은 유지됩니다)',
+                    isDestructive: true,
+                    onConfirm: () => {
+                        state.logs = [];
+                        persistState();
+                        renderLogsTable();
+                        updateCharts();
+                        document.getElementById('lastLoggedInfo').textContent = '아직 기록된 행동이 없습니다.';
+                        showToast('모든 관찰 기록이 초기화되었습니다.', 'info');
+                    }
+                });
+            });
+
+            // AI Report Generate Button
+            document.getElementById('btnGenerateAiReport').addEventListener('click', generateAiReport);
+
+            // Copy Report Text Button
+            document.getElementById('btnCopyReport').addEventListener('click', () => {
+                if (!state.currentReportText) return;
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = state.currentReportText;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('리포트 전체 내용이 클립보드에 복사되었습니다!', 'success');
+                } catch (e) {
+                    showToast('복사에 실패했습니다.', 'error');
+                }
+                document.body.removeChild(tempTextArea);
+            });
+
+            // Print / Save PDF Button
+            document.getElementById('btnPrintReport').addEventListener('click', () => {
+                window.print();
+            });
+        }
+
+        function updateSyncBannerStatus() {
+            const statusText = document.getElementById('syncStatusText');
+            const dot = document.getElementById('syncDot');
+
+            if (state.sheetsWebhookUrl && state.sheetsWebhookUrl.startsWith('http')) {
+                statusText.innerHTML = `구글 시트 실시간 연동 활성화됨: <span class="font-mono text-indigo-700">${escapeHtml(state.sheetsWebhookUrl.substring(0, 45))}...</span>`;
+                dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
+            } else {
+                statusText.textContent = '구글 시트 연동 URL이 아직 설정되지 않았습니다 (기록은 로컬에 자동 보관됩니다)';
+                dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400';
+            }
+        }
+
+        function exportLogsToCsv() {
+            if (state.logs.length === 0) {
+                showToast('내보낼 관찰 기록 데이터가 없습니다.', 'warning');
+                return;
+            }
+
+            // UTF-8 BOM for Excel Korean encoding compatibility
+            let csvContent = '\uFEFF';
+            // Required Header: 학생명, 표적행동, 타임스탬프, 강도
+            csvContent += '학생명,표적행동,타임스탬프,강도,강도점수\n';
+
+            state.logs.forEach(item => {
+                const row = [
+                    `"${item.student.replace(/"/g, '""')}"`,
+                    `"${item.behavior.replace(/"/g, '""')}"`,
+                    `"${item.timestamp}"`,
+                    `"${item.intensity}"`,
+                    item.score
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = `행동분석_관찰기록_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(url);
+            showToast('CSV 파일이 다운로드되었습니다.', 'success');
+        }
+
+        window.onload = function() {
+            initData();
+            initCharts();
+            renderSelectors();
+            renderLogsTable();
+            updateCharts();
+            updateSyncBannerStatus();
+            bindEvents();
+        };
+    </script>
+</body>
+</html>
